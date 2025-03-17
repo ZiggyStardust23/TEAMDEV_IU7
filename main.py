@@ -46,11 +46,11 @@ def main_menu_keyboard():
 
 # Команда /start — создание персонажа
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    tg_id = update.effective_user.id
+    u_tg_id = str(update.effective_user.id)
     username = update.effective_user.username
 
     # Проверяем, есть ли пользователь в базе
-    user = session.query(User).filter_by(tg_id=tg_id).first()
+    user = session.query(User).filter_by(tg_id=u_tg_id).first()
 
     if user:
         await context.bot.send_message(
@@ -59,36 +59,89 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=main_menu_keyboard()
         )
     else:
-        # Создаем нового персонажа
-        new_user = User(
-            tg_id=tg_id,
-            username=username,
-            class_="Warrior",
-            level=1,
-            xp=0,
-            health=100,
-            mana=50,
-            attack=10,
-            defense=5,
-            gold=0,
-            energy=10,
-            abilities={"skill1": "Fireball"},
-            inventory={"item1": "Sword"}
-        )
-        session.add(new_user)
-        session.commit()
+        # Создаем меню выбора класса
+        keyboard = [
+            [InlineKeyboardButton("Маг", callback_data='class_mage')],
+            [InlineKeyboardButton("Воин", callback_data='class_warrior')],
+            [InlineKeyboardButton("Лучник", callback_data='class_archer')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text="Персонаж создан! Вы — Воин.",
-            reply_markup=main_menu_keyboard()
+            text="Выберите класс персонажа:",
+            reply_markup=reply_markup
         )
+
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    u_tg_id = str(query.from_user.id)
+    username = query.from_user.username
+
+    # Определяем выбранный класс
+    if query.data == 'class_mage':
+        class_ = "Mage"
+        health = 80
+        mana = 100
+        attack = 8
+        defense = 3
+        abilities = {"skill1": "Fireball"}
+        inventory = {"item1": "Staff"}
+    elif query.data == 'class_warrior':
+        class_ = "Warrior"
+        health = 100
+        mana = 50
+        attack = 10
+        defense = 5
+        abilities = {"skill1": "Slash"}
+        inventory = {"item1": "Sword"}
+    elif query.data == 'class_archer':
+        class_ = "Archer"
+        health = 90
+        mana = 60
+        attack = 12
+        defense = 4
+        abilities = {"skill1": "Arrow Shot"}
+        inventory = {"item1": "Bow"}
+
+    # Создаем нового персонажа
+    new_user = User(
+        tg_id=u_tg_id,
+        username=username,
+        class_=class_,
+        level=1,
+        xp=0,
+        health=health,
+        mana=mana,
+        attack=attack,
+        defense=defense,
+        gold=0,
+        energy=10,
+        abilities=abilities,
+        inventory=inventory
+    )
+    session.add(new_user)
+    session.commit()
+    
+    await query.edit_message_text(
+        text=f"Персонаж создан! Вы — {class_}.",
+        reply_markup=None  # Убираем клавиатуру
+    )
+
+    # Отправляем главное меню
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        reply_markup=main_menu_keyboard()
+    )
+
 
 # Команда /profile — просмотр профиля
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-
-    user = session.query(User).filter_by(user_id=user_id).first()
+    
+    u_tg_id = str(update.effective_user.id)
+    user = session.query(User).filter_by(tg_id=u_tg_id).first()
 
     if user:
         profile_text = (
@@ -194,16 +247,6 @@ async def quest(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=main_menu_keyboard()
     )
 '''
-# Обработка inline-кнопок
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == "continue":
-        await query.edit_message_text(
-            text="Вы готовы к новым приключениям!",
-            reply_markup=main_menu_keyboard()
-        )
 
 
 # Основная функция
@@ -217,8 +260,7 @@ if __name__ == '__main__':
     #application.add_handler(MessageHandler(filters.Regex("🛒 Магазин"), shop))
     #application.add_handler(MessageHandler(filters.Regex("📜 Квесты"), quest))
 
-    # Обработчик inline-кнопок
-    application.add_handler(CallbackQueryHandler(button_handler))
+    application.add_handler(CallbackQueryHandler(button_callback))
 
     # Запуск бота
     application.run_polling()
