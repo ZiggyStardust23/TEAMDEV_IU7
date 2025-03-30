@@ -57,6 +57,7 @@ class Item(Base):
     item_id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(50), nullable=False)
     type = Column(String(50), nullable=False)
+    power = Column(Integer, default=0)
     attack_bonus = Column(Integer, default=0)
     defense_bonus = Column(Integer, default=0)
     effect = Column(String(100))
