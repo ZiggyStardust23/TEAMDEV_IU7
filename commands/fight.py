@@ -5,7 +5,8 @@ from telegram.ext import (
     ContextTypes
 )
 from sqlalchemy.orm.attributes import flag_modified
-from db.db import Item, User, Monster
+from commands.quest import check_quest_completion
+from db.db import Item, Quest, User, Monster, Skill
 from db.dbSession import session
 from gui.keyboards import main_menu_keyboard
 
@@ -48,16 +49,27 @@ async def fight(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_current_mana = user.mana
     
         
-        
+    user_skills = user.abilities if isinstance(user.abilities, dict) else {}
+    skills = []
+    if user_skills:
+        id_array = user_skills["skills"]
+        bd_skills = session.query(Skill).filter(Skill.skill_id.in_(id_array)).all() if id_array else []
+        for bd_skill in bd_skills:
+            skills.append({
+                "id": bd_skill.skill_id,
+                "name": bd_skill.name,
+                "type": bd_skill.type,
+                "power": bd_skill.power,
+                "mana_cost": bd_skill.mana_cost
+            }) 
     inventory_items = user.inventory if isinstance(user.inventory, dict) else {}
-    
+    inv = []
     if inventory_items:
         item_ids = [int(item_id) for item_id in inventory_items.keys()]
         items = session.query(Item).filter(Item.item_id.in_(item_ids)).all() if item_ids else []
         
         items_dict = {str(item.item_id): item for item in items}
         
-        inv = []
         for item_id, count in inventory_items.items():
             item = items_dict.get(item_id)
             if item:
@@ -77,7 +89,7 @@ async def fight(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'round': current_round,
         'user_energy': user.energy,
         'items': inv,
-        'skills': mock_skills,
+        'skills': skills,
         'buffs': {'attack': 0, 'defense': 0}
     }
     
@@ -154,9 +166,15 @@ async def fight_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
             print("Item",item)
             print("Item_id",item_id)
             user.inventory[str(item['id'])] = user.inventory.get(str(item['id']), 0) - 1
+            context_index = fight_context['items'].index(item)
+            fight_context['items'][context_index]['count'] -= 1
+
             if user.inventory[str(item['id'])] <= 0:
                 del user.inventory[str(item['id'])]
+                fight_context['items'].pop(context_index)
                 logging.info(f"Предмет {item['name']} удален из инвентаря пользователя {u_tg_id}")
+                
+            context.user_data['fight_context'] = fight_context
 
             flag_modified(user, "inventory")
             result_message = f"Вы использовали {item['name']}!\n" + effect_message
@@ -207,6 +225,18 @@ async def fight_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"{result_message}\n\nВы победили монстра {monster.name}!\n"
                  f"Получено: {reward_gold} золота и {reward_xp} опыта."
         )
+        if user.active_quest_id:
+            quest = session.query(Quest).get(user.active_quest_id)
+            if quest.quest_type == "kill" and str(quest.target) == str(monster.monster_id):
+                user.quest_progress += 1
+                session.commit()
+                if check_quest_completion(user):
+                    await query.edit_message_text(
+                        text=f"{result_message}\n\nВы победили монстра {monster.name}!\n"
+                             f"Получено: {reward_gold} золота и {reward_xp} опыта."
+                             f"\n\n🎉 Вы выполнили квест {quest.name}!\n"
+                             f"Получено: {quest.reward_gold}💰 и {quest.reward_xp} XP",
+                    )
         context.user_data.pop('fight_context', None)
         return
     
@@ -271,12 +301,12 @@ def apply_skill_effect(user, skill, fight_context):
     effect_message = ""
     
     if skill['type'] == "damage":
-        damage = skill['power'] + user.magic_attack // 2
+        damage = skill['power'] * (100 + user.level)/100
         fight_context['monster_hp'] -= damage
         effect_message = f"Нанесено {damage} магического урона."
     
     elif skill['type'] == "heal":
-        heal_amount = skill['power'] + user.magic_attack // 2
+        heal_amount = skill['power'] + (100 + user.level)/100
         max_hp = user.health
         fight_context['user_hp'] = min(max_hp, fight_context['user_hp'] + heal_amount)
         effect_message = f"Восстановлено {heal_amount} здоровья."
@@ -284,5 +314,9 @@ def apply_skill_effect(user, skill, fight_context):
     elif skill['type'] == "buff_defense":
         fight_context['buffs']['defense'] = skill['power']
         effect_message = f"Ваша защита увеличена на {skill['power']} на 3 раунда."
+    
+    elif skill['type'] == "buff_attack":
+        fight_context['buffs']['attack'] = skill['power']
+        effect_message = f"Ваша атака увеличена на {skill['power']} на 3 раунда."
     
     return effect_message

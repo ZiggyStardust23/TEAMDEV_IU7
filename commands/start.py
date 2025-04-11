@@ -44,24 +44,36 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         mana = 100
         attack = 8
         defense = 3
-        abilities = {"skill1": "Fireball"}
-        inventory = {"item1": "Staff"}
+        abilities = {'skills': [
+            '1',
+            '2',
+            '3'
+        ]}
+        inventory = {}
     elif query.data == 'class_warrior':
         class_ = "Warrior"
         health = 100
         mana = 50
         attack = 10
         defense = 5
-        abilities = {"skill1": "Slash"}
-        inventory = {"item1": "Sword"}
+        abilities = {'skills': [
+            '4',
+            '5',
+            '6'
+        ]}
+        inventory = {}
     elif query.data == 'class_archer':
         class_ = "Archer"
         health = 90
         mana = 60
         attack = 12
         defense = 4
-        abilities = {"skill1": "Arrow Shot"}
-        inventory = {"item1": "Bow"}
+        abilities = {'skills': [
+            '7',
+            '8',
+            '9'
+        ]}
+        inventory = {}
 
     new_user = User(
         tg_id=u_tg_id,

@@ -30,6 +30,9 @@ class User(Base):
     energy = Column(Integer, default=10)
     abilities = Column(JSON)
     inventory = Column(JSON)
+    active_quest_id = Column(Integer, ForeignKey('Quests.quest_id'))
+    quest_progress = Column(Integer, default=0)
+    completed_quests = Column(JSON, default=list)
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
     updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -60,24 +63,29 @@ class Item(Base):
     rarity = Column(String(50), default='common')
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
     updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+class Skill(Base):
+    __tablename__ = 'Skills'
+    skill_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(50), nullable=False)
+    type = Column(String(50), nullable=False)
+    power = Column(Integer, default=0)
+    mana_cost = Column(Integer, default=0)
+    created_at = Column(TIMESTAMP, default=datetime.utcnow)
+    updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Quest(Base):
     __tablename__ = 'Quests'
     quest_id = Column(Integer, primary_key=True, autoincrement=True)
-    description = Column(String, nullable=False)
-    type = Column(String(50), nullable=False)
-    reward = Column(JSON)
-    created_at = Column(TIMESTAMP, default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class UserQuest(Base):
-    __tablename__ = 'UserQuests'
-    user_id = Column(Integer, ForeignKey('Users.user_id'), primary_key=True)
-    quest_id = Column(Integer, ForeignKey('Quests.quest_id'), primary_key=True)
-    status = Column(String(50), default='active')
-    progress = Column(Integer, default=0)
-    created_at = Column(TIMESTAMP, default=datetime.utcnow)
-    updated_at = Column(TIMESTAMP, default=datetime.utcnow, onupdate=datetime.utcnow)
+    name = Column(String(100), nullable=False)
+    description = Column(String(300))
+    quest_type = Column(String(50))
+    target = Column(String(50))      
+    required = Column(Integer)       
+    reward_gold = Column(Integer)
+    reward_xp = Column(Integer)
+    reward_item_id = Column(Integer, ForeignKey('Items.item_id'))
+    min_level = Column(Integer, default=1)
 
 class Battle(Base):
     __tablename__ = 'Battles'
