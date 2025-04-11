@@ -45,7 +45,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         attack = 8
         defense = 3
         abilities = {"skill1": "Fireball"}
-        inventory = {"item1": "Staff"}
+        inventory = {}
     elif query.data == 'class_warrior':
         class_ = "Warrior"
         health = 100
@@ -53,7 +53,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         attack = 10
         defense = 5
         abilities = {"skill1": "Slash"}
-        inventory = {"item1": "Sword"}
+        inventory = {}
     elif query.data == 'class_archer':
         class_ = "Archer"
         health = 90
@@ -61,7 +61,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         attack = 12
         defense = 4
         abilities = {"skill1": "Arrow Shot"}
-        inventory = {"item1": "Bow"}
+        inventory = {}
 
     new_user = User(
         tg_id=u_tg_id,

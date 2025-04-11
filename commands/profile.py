@@ -32,10 +32,10 @@ async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             item = items_dict.get(item_id)
             if item:
                 line = f"🔹 {item.name}: {count} шт."
-                if item.attack_bonus > 0:
-                    line += f" (+{item.attack_bonus}⚔)"
-                if item.defense_bonus > 0:
-                    line += f" (+{item.defense_bonus}🛡)"
+            #    if item.attack_bonus > 0:
+            #        line += f" (+{item.attack_bonus}⚔)"
+            #    if item.defense_bonus > 0:
+            #        line += f" (+{item.defense_bonus}🛡)"
                 inventory_lines.append(line)
         
         inventory_text = "\n".join(inventory_lines) if inventory_lines else "📭 Пусто"

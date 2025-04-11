@@ -5,9 +5,10 @@ from telegram.ext import (
     ContextTypes
 )
 from sqlalchemy.orm.attributes import flag_modified
-from db.db import Item, User, Monster
+from db.db import Item, User, Monster, Quest
 from db.dbSession import session
 from gui.keyboards import main_menu_keyboard
+from commands.quest import check_quest_completion
 
 def get_random_monster():
     monsters = session.query(Monster).all()
@@ -207,6 +208,22 @@ async def fight_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=f"{result_message}\n\nВы победили монстра {monster.name}!\n"
                  f"Получено: {reward_gold} золота и {reward_xp} опыта."
         )
+        print("Testovi Churka")
+        if user.active_quest_id:
+            print("YES1")
+            quest = session.query(Quest).get(user.active_quest_id)
+            if quest.quest_type == "kill" and str(quest.target) == str(monster.monster_id):
+                print("YES2")
+                user.quest_progress += 1
+                print("YES3",user.quest_progress)
+                session.commit()
+                if check_quest_completion(user):
+                    await query.edit_message_text(
+                        text=f"{result_message}\n\nВы победили монстра {monster.name}!\n"
+                             f"Получено: {reward_gold} золота и {reward_xp} опыта."
+                             f"\n\n🎉 Вы выполнили квест {quest.name}!\n"
+                             f"Получено: {quest.reward_gold}💰 и {quest.reward_xp} XP",
+                    )
         context.user_data.pop('fight_context', None)
         return
     
