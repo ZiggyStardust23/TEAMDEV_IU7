@@ -1,0 +1,36 @@
+ame: Deploy Telegram Bot
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install SSH key
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Prepare server
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          rm -rf ~/bot
+          mkdir -p ~/bot
+        "
+
+    - name: Copy files
+      run: |
+        scp -r .env main.py db.py commands/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/bot/
+
+    - name: Start services
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          cd ~/bot
+          nohup python -B db.py > db.log 2>&1
+          nohup python -B main.py > bot.log 2>&1 &
+        "
