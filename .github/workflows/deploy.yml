@@ -23,29 +23,29 @@ jobs:
           mkdir -p ~/bot
         "
 
-    - name: Copy project files
+    - name: Copy entire project (including .env)
       run: |
-        scp -r -o StrictHostKeyChecking=no \
-          .env main.py db.py commands/ requirements.txt \
+        # Копируем ВСЕ файлы проекта, включая .env
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+          --exclude='.git' \
+          --exclude='.github' \
+          --exclude='.gitignore' \
+          --exclude='*.pyc' \
+          --exclude='__pycache__' \
+          ./ \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/bot/
 
-    - name: Setup Python environment
+    - name: Set correct permissions
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-          cd ~/bot
-          # Установка необходимых системных пакетов
-          sudo apt update && sudo apt install -y python3-venv python3-pip
-          # Создание и активация venv
-          python3 -m venv venv
-          . venv/bin/activate
-          pip install -r requirements.txt
+          chmod 600 ~/bot/.env  # Защищаем .env
+          chmod -R u+r ~/bot    # Права на чтение
         "
 
-    - name: Start bot
+    - name: Start bot services
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           cd ~/bot
-          . venv/bin/activate
-          nohup python -B db.py > db.log 2>&1
-          nohup python -B main.py > bot.log 2>&1 &
+          python3 -B db/db.py > db.log 2>&1
+          nohup python3 -B main.py > bot.log 2>&1 &
         "
