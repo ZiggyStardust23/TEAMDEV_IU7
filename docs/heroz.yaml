@@ -1,0 +1,281 @@
+openapi: 3.0.3
+info:
+  title: Telegram Game API
+  version: 1.0.0
+paths:
+  /start:
+    post:
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartResponse'
+  /profile:
+    post:
+      operationId: getProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+  /fight/start:
+    post:
+      operationId: startFight
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FightStartRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FightResponse'
+  /fight/action:
+    post:
+      operationId: fightAction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FightActionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FightResponse'
+  /shop/buy:
+    post:
+      operationId: buyItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuyRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopResponse'
+  /shop/items:
+    post:
+      operationId: getItems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemsRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopResponse'
+  /quest:
+    post:
+      operationId: handleQuest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestActionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestResponse'
+components:
+  schemas:
+    StartRequest:
+      type: object
+      properties:
+        tg_id:
+          type: string
+        username:
+          type: string
+      required:
+      - tg_id
+    StartResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user_id:
+          type: integer
+      required:
+      - message
+      - user_id
+    ProfileRequest:
+      type: object
+      properties:
+        tg_id:
+          type: string
+      required:
+      - tg_id
+    Skill:
+      type: object
+      properties:
+        name:
+          type: string
+        level:
+          type: integer
+      required:
+      - name
+      - level
+    ProfileResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        level:
+          type: integer
+        experience:
+          type: integer
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skill'
+      required:
+      - name
+      - level
+      - experience
+      - skills
+    FightStartRequest:
+      type: object
+      properties:
+        tg_id:
+          type: string
+      required:
+      - tg_id
+    FightActionRequest:
+      type: object
+      properties:
+        tg_id:
+          type: string
+        action:
+          type: string
+        skill_id:
+          type: integer
+        item_id:
+          type: integer
+      required:
+      - tg_id
+      - action
+    FightResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user_hp:
+          type: integer
+        enemy_hp:
+          type: integer
+        result:
+          type: string
+          enum:
+          - win
+          - lose
+          - draw
+      required:
+      - message
+      - user_hp
+      - enemy_hp
+    BuyRequest:
+      type: object
+      properties:
+        tg_id:
+          type: string
+        item_id:
+          type: integer
+      required:
+      - tg_id
+      - item_id
+    ItemsRequest:
+      type: object
+      properties:
+        tg_id:
+          type: string
+      required:
+      - tg_id
+    ShopItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: integer
+      required:
+      - id
+      - name
+      - description
+      - price
+    ShopResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShopItem'
+      required:
+      - message
+      - items
+    QuestActionRequest:
+      type: object
+      properties:
+        tg_id:
+          type: string
+        action:
+          type: string
+        quest_id:
+          type: integer
+      required:
+      - tg_id
+      - action
+    QuestResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        quest_id:
+          type: integer
+        success:
+          type: boolean
+      required:
+      - message
