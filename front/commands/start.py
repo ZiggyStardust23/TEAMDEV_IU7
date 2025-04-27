@@ -3,8 +3,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 from gui.keyboards import main_menu_keyboard
+import os
 
-API_URL = "http://127.0.0.1:9000"
+API_URL = os.getenv("BACKEND_URL", "http://backend:9000")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tg_id = str(update.effective_user.id)

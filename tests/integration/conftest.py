@@ -1,11 +1,38 @@
+import os
+from dotenv import load_dotenv
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from back.db.db import Base
 import back.db.dbSession as dbSession
+import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+load_dotenv()
+DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
+DB_PORT = os.getenv("POSTGRES_PORT", 5432)
+DB_NAME = "telegram_bot_test"
+DB_USER = os.getenv("POSTGRES_USER", "botuser")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "botpassword")
 
-# Подключение к тестовой БД PostgreSQL
-DATABASE_URL = "postgresql+psycopg2://postgres:postgres@localhost:5432/tests"
+
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+print("DATABASE_URI =", DATABASE_URL)
+
+def create_test_db():
+    connection = psycopg2.connect(
+        dbname="postgres", user="botuser", password="botpassword", host="postgres"
+    )
+    connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cursor = connection.cursor()
+    cursor.execute("SELECT 1 FROM pg_database WHERE datname = 'telegram_bot_test'")
+    exists = cursor.fetchone()
+    if not exists:
+        cursor.execute('CREATE DATABASE telegram_bot_test')
+    cursor.close()
+    connection.close()
+
+create_test_db()
+
 engine = create_engine(DATABASE_URL)
 TestingSessionLocal = sessionmaker(bind=engine)
 

@@ -1,0 +1,7 @@
+fastapi
+sqlalchemy
+psycopg2-binary
+apscheduler
+python-dotenv
+python-telegram-bot
+requests
