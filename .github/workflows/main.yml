@@ -41,7 +41,14 @@ jobs:
           chmod 600 ~/bot/.env  # Защищаем .env
           chmod -R u+r ~/bot    # Права на чтение
         "
-
+        
+    - name: Kill previous bot, backend and frontend processes
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          echo 'Killing old processes...'
+          pkill -f 'uvicorn back.main:app'  true
+          pkill -f 'python3 front/main.py'  true"
+          
     - name: Start bot services and run tests
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
