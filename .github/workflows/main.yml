@@ -1,0 +1,36 @@
+name: Deploy Telegram Bot
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Run backend and bot
+      run: |
+        # Запускаем бэкенд и бота в фоновом режиме
+        nohup python -m uvicorn back.main:app --port 9000 > backend.log 2>&1 &
+        nohup python front/main.py > bot.log 2>&1 &
+
+        # Проверяем, что процессы запустились
+        sleep 5
+        ps aux | grep uvicorn
+        ps aux | grep "python front/main.py"
+
+    - name: Verify processes are running
+      run: |
+        pgrep -f "uvicorn back.main:app" || echo "Backend process not found" && exit 1
+        pgrep -f "python front/main.py" || echo "Bot process not found" && exit 1
