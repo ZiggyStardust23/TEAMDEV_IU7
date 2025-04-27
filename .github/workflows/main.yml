@@ -1,36 +1,54 @@
-name: Deploy Telegram Bot
+name: Deploy to Production Server
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Install SSH key
+      uses: webfactory/ssh-agent@v0.7.0
       with:
-        python-version: '3.10'
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Run backend and bot
+    - name: Deploy to server
+      env:
+        SSH_HOST: 158.160.163.157
+        SSH_USER: user
+        PROJECT_DIR: /path/to/your/project  # Укажите актуальный путь на сервере
       run: |
-        # Запускаем бэкенд и бота в фоновом режиме
+        # Создаём временный скрипт для развёртывания
+        cat << 'EOF' > deploy.sh
+        #!/bin/bash
+        
+        # Переходим в директорию проекта
+        cd $PROJECT_DIR || exit 1
+        
+        # Останавливаем предыдущие процессы
+        pkill -f "uvicorn back.main:app" || true
+        pkill -f "python front/main.py" || true
+        
+        # Обновляем код
+        git pull origin main
+        
+        # Запускаем процессы в фоне с nohup и логированием
         nohup python -m uvicorn back.main:app --port 9000 > backend.log 2>&1 &
         nohup python front/main.py > bot.log 2>&1 &
-
-        # Проверяем, что процессы запустились
+        
+        # Проверяем запуск
         sleep 5
-        ps aux | grep uvicorn
-        ps aux | grep "python front/main.py"
-
-    - name: Verify processes are running
-      run: |
-        pgrep -f "uvicorn back.main:app" || echo "Backend process not found" && exit 1
-        pgrep -f "python front/main.py" || echo "Bot process not found" && exit 1
+        pgrep -f "uvicorn back.main:app" || { echo "Backend failed to start"; exit 1; }
+        pgrep -f "python front/main.py" || { echo "Bot failed to start"; exit 1; }
+        
+        echo "Deployment completed successfully"
+        EOF
+        
+        # Копируем скрипт на сервер и выполняем
+        scp -o StrictHostKeyChecking=no deploy.sh ${SSH_USER}@${SSH_HOST}:~/deploy.sh
+        ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} "chmod +x ~/deploy.sh && ~/deploy.sh"
