@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter
-from schemas.shop_schema import BuyRequest, ItemsRequest
-from services import shop
+from back.schemas.shop_schema import BuyRequest, ItemsRequest
+from back.services import shop
 
 router = APIRouter()
 

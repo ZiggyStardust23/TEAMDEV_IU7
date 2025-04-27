@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter
-from schemas.fight_schema import FightStartRequest, FightActionRequest
-from services import fight
+from back.schemas.fight_schema import FightStartRequest, FightActionRequest
+from back.services import fight
 
 router = APIRouter()
 

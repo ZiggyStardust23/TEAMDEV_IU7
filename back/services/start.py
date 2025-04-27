@@ -1,7 +1,7 @@
 # api/services/start_service.py
 
-from db.dbSession import session
-from db.db import User
+from back.db.dbSession import session
+from back.db.db import User
 
 CLASS_PRESETS = {
     "mage": {
@@ -40,7 +40,7 @@ def create_user(tg_id: str, username: str):
         "classes": ["mage", "warrior", "archer"]
     }
 
-def choose_class(tg_id: str, chosen: str):
+def choose_class(tg_id: str, chosen: str, username: str):
     if chosen not in CLASS_PRESETS:
         return {"error": "Неверный класс"}
 
@@ -51,7 +51,7 @@ def choose_class(tg_id: str, chosen: str):
     cls = CLASS_PRESETS[chosen]
     user = User(
         tg_id=tg_id,
-        username="user",
+        username=username,
         class_=cls["class_"],
         level=1,
         xp=0,

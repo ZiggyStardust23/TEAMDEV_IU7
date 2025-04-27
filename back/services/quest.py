@@ -1,7 +1,8 @@
 # api/services/quest_service.py
 
-from db.dbSession import session
-from db.db import User, Quest
+from sqlalchemy import not_
+from back.db.dbSession import session
+from back.db.db import User, Quest
 from sqlalchemy.orm.attributes import flag_modified
 
 def get_quest_progress(user: User, quest: Quest):
@@ -67,7 +68,7 @@ def handle_quest(tg_id: str, action: str, quest_id: int = None):
         # default — показать доступные
         available = session.query(Quest).filter(
             Quest.min_level <= user.level,
-            ~Quest.quest_id.in_(user.completed_quests or [])
+            not_(Quest.quest_id.in_(user.completed_quests)) if user.completed_quests else True
         ).limit(3).all()
 
         quests = [{

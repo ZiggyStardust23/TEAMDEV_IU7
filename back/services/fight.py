@@ -1,8 +1,9 @@
 # api/services/fight_service.py
 
 from random import choice, randint
-from db.dbSession import session
-from db.db import User, Monster, Skill, Item, Quest
+from back.services.userProfile import calculate_level
+from back.db.dbSession import session
+from back.db.db import User, Monster, Skill, Item, Quest
 from sqlalchemy.orm.attributes import flag_modified
 
 def get_random_monster():
@@ -97,7 +98,7 @@ def fight_action(tg_id: str, action: str, skill_id: int = None, item_id: int = N
         return {"error": "Монстр не найден."}
 
     msg = ""
-
+    level = calculate_level(user.xp)
     if action == "attack":
         dmg = calculate_user_attack(user, fc["buffs"].get("attack", 0))
         fc["monster_hp"] -= dmg
@@ -112,7 +113,6 @@ def fight_action(tg_id: str, action: str, skill_id: int = None, item_id: int = N
             return {"message": "Вы успешно сбежали! Энергия -1"}
         else:
             msg += "Не удалось сбежать."
-
     elif action == "useskill" and skill_id:
         skills = user.abilities.get("skills", [])
         if str(skill_id) not in skills:
@@ -122,11 +122,11 @@ def fight_action(tg_id: str, action: str, skill_id: int = None, item_id: int = N
             return {"message": "Недостаточно маны."}
         fc["user_mana"] -= skill.mana_cost
         if skill.type == "damage":
-            dmg = int(skill.power * (100 + user.level) / 100)
+            dmg = int(skill.power * (100 + level) / 100)
             fc["monster_hp"] -= dmg
             msg += f"Навык {skill.name}: вы нанесли {dmg} урона."
         elif skill.type == "heal":
-            heal = int(skill.power + (100 + user.level) / 100)
+            heal = int(skill.power + (100 + level) / 100)
             fc["user_hp"] = min(user.health, fc["user_hp"] + heal)
             msg += f"Навык {skill.name}: вы восстановили {heal} HP."
         elif skill.type == "buff_attack":
@@ -152,6 +152,23 @@ def fight_action(tg_id: str, action: str, skill_id: int = None, item_id: int = N
             fc["buffs"]["attack"] = item.power
             msg += f"Атака +{item.power}."
         elif item.type == "escape":
+            inv[item_key] -= 1
+            if inv[item_key] <= 0:
+                del inv[item_key]
+            user.inventory = inv.copy()
+            flag_modified(user, "inventory")
+
+            # Списываем из контекста боя
+            items = fc.get("items", [])
+            new_items = []
+            for it in items:
+                if it["id"] == item.item_id:
+                    if it["count"] > 1:
+                        new_items.append({**it, "count": it["count"] - 1})
+                    # иначе — удаляем
+                else:
+                    new_items.append(it)
+            fc["items"] = new_items
             user.energy -= 1
             user.abilities.pop("fight_context", None)
             flag_modified(user, "abilities")
@@ -200,6 +217,8 @@ def fight_action(tg_id: str, action: str, skill_id: int = None, item_id: int = N
         user.energy -= 1
 
         # 📌 Обновление квеста, если он активен
+        quest_completed = False
+        quest = None
         if user.active_quest_id:
             quest = session.query(Quest).get(user.active_quest_id)
             if quest.quest_type == "kill" and str(quest.target) == str(fc["monster_id"]):
@@ -223,13 +242,18 @@ def fight_action(tg_id: str, action: str, skill_id: int = None, item_id: int = N
 
                     user.active_quest_id = None
                     user.quest_progress = 0
+                    quest_completed = True
 
         user.abilities.pop("fight_context", None)
         flag_modified(user, "abilities")
         session.commit()
+        
+        if quest != None and quest_completed:
+            msg += f"\n\n🎯 Квест '{quest.name}' выполнен! Награда: +{quest.reward_gold}💰, +{quest.reward_xp} XP."
+        msg += f"\n\nВы победили! +{gold}💰, +{xp} XP."
 
         return {
-            "message": msg + f"\n\nВы победили! +{gold}💰, +{xp} XP.",
+            "message": msg,
             "user_gold": user.gold,
             "user_xp": user.xp
         }

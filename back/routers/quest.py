@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter
-from schemas.quest_schema import QuestActionRequest
-from services import quest
+from back.schemas.quest_schema import QuestActionRequest
+from back.services import quest
 
 router = APIRouter()
 

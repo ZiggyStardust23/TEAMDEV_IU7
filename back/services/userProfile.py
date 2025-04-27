@@ -1,7 +1,18 @@
 # api/services/profile_service.py
 
-from db.db import Quest, User, Item
-from db.dbSession import session
+from back.db.db import Quest, User, Item
+from back.db.dbSession import session
+
+def calculate_level(xp: int) -> int:
+    level = 1
+    threshold = 200
+
+    while xp >= threshold:
+        level += 1
+        threshold += 100 * level
+
+    return level
+
 
 def get_profile(tg_id: str):
     user = session.query(User).filter_by(tg_id=tg_id).first()
@@ -25,13 +36,15 @@ def get_profile(tg_id: str):
                 if item.defense_bonus > 0:
                     line += f" (+{item.defense_bonus}🛡)"
                 inventory.append(line)
+                
+    level = calculate_level(user.xp)
 
 
     energy_bar = f"⚡ Энергия: {user.energy}/10"
     profile_text = (
         f"👤 Профиль {user.username}\n"
         f"🏅 Класс: {user.class_}\n"
-        f"⚜️ Уровень: {user.level} (XP: {user.xp}/{user.level * 100 + 100})\n"
+        f"⚜️ Уровень: {level} (XP: {user.xp})\n"
         f"❤️ HP: {user.health}   🔮 Mana: {user.mana}\n"
         f"⚔️ Атака: {user.attack}   🛡 Защита: {user.defense}\n"
         f"💰 Золото: {user.gold}\n"

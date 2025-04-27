@@ -1,7 +1,7 @@
 
 from fastapi import APIRouter
-from schemas.profile_schema import ProfileRequest
-from services import userProfile
+from back.schemas.profile_schema import ProfileRequest
+from back.services import userProfile
 
 router = APIRouter()
 

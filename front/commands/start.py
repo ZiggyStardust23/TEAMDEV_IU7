@@ -2,6 +2,8 @@ import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
+from gui.keyboards import main_menu_keyboard
+
 API_URL = "http://127.0.0.1:9000"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -21,18 +23,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         markup = InlineKeyboardMarkup(buttons)
         await update.message.reply_text(response["message"], reply_markup=markup)
     else:
-        await update.message.reply_text(response.get("message", "Ошибка"))
+        k = main_menu_keyboard()
+        await update.message.reply_text(response.get("message", "Ошибка"), reply_markup=k)
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     tg_id = str(query.from_user.id)
+    username = str(query.from_user.username)
     chosen = query.data.replace("class_", "")
 
     response = requests.post(f"{API_URL}/start/class", json={
         "tg_id": tg_id,
-        "chosen": chosen
+        "chosen": chosen,
+        "username": username
     }).json()
 
     await query.edit_message_text(response.get("message", "Ошибка"))

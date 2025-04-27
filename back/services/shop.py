@@ -1,7 +1,7 @@
 # api/services/shop_service.py
 
-from db.db import User, Item
-from db.dbSession import session
+from back.db.db import User, Item
+from back.db.dbSession import session
 from sqlalchemy.orm.attributes import flag_modified
 
 def get_shop_items(tg_id: str):
