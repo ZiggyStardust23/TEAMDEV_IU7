@@ -5,7 +5,7 @@ from back.db.db import Base
 import back.db.dbSession as dbSession
 
 # Подключение к тестовой БД PostgreSQL
-DATABASE_URL = "postgresql+psycopg2://postgres:3259@localhost:5433/tests"
+DATABASE_URL = "postgresql+psycopg2://postgres:postgres@localhost:5432/tests"
 engine = create_engine(DATABASE_URL)
 TestingSessionLocal = sessionmaker(bind=engine)
 
