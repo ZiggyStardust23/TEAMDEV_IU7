@@ -15,7 +15,7 @@ jobs:
 
     - name: Set up Docker
       uses: docker/setup-buildx-action@v3
-      
+
     - name: Install docker-compose
       run: |
         sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.7/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
@@ -27,10 +27,32 @@ jobs:
         docker-compose build tests
         docker-compose run --rm tests
 
-  deploy:
-    name: Deploy to Server
+  build:
+    name: Build Docker Images
     runs-on: ubuntu-latest
     needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v3
+
+    - name: Install docker-compose
+      run: |
+        sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.7/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose version
+
+    - name: Build backend and frontend images
+      run: |
+        docker-compose build backend frontend
+
+  release:
+    name: Release (Copy to Server)
+    runs-on: ubuntu-latest
+    needs: build
 
     steps:
     - name: Checkout code
@@ -41,13 +63,6 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Prepare server directory
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-          rm -rf ~/app
-          mkdir -p ~/app
-        "
-
     - name: Copy project files
       run: |
         rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
@@ -57,17 +72,40 @@ jobs:
           ./ \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/app/
 
-    - name: Set correct permissions
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-          chmod 600 ~/app/.env
-          chmod -R u+r ~/app
-        "
+  deploy_backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    needs: release
 
-    - name: Rebuild and restart services
+    steps:
+    - name: Install SSH key
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Restart backend service
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           cd ~/app
-          docker-compose down
-          docker-compose up --build -d
+          docker-compose build backend
+          docker-compose up -d backend
+        "
+
+  deploy_frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: release
+
+    steps:
+    - name: Install SSH key
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Restart frontend service
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          cd ~/app
+          docker-compose build frontend
+          docker-compose up -d frontend
         "
