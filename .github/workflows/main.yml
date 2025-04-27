@@ -21,21 +21,30 @@ jobs:
       env:
         SSH_HOST: 158.160.163.157
         SSH_USER: user
-        PROJECT_DIR: /path/to/your/project  # Укажите актуальный путь на сервере
+        PROJECT_DIR: /home/user/bot-project  # Укажите правильный путь
       run: |
         # Создаём временный скрипт для развёртывания
         cat << 'EOF' > deploy.sh
         #!/bin/bash
         
         # Переходим в директорию проекта
-        cd $PROJECT_DIR || exit 1
+        cd "$PROJECT_DIR" || exit 1
         
         # Останавливаем предыдущие процессы
         pkill -f "uvicorn back.main:app" || true
         pkill -f "python front/main.py" || true
         
+        # Если директория не существует или не git репозиторий - клонируем
+        if [ ! -d "$PROJECT_DIR/.git" ]; then
+          rm -rf "$PROJECT_DIR"
+          git clone https://github.com/your-username/your-repo.git "$PROJECT_DIR"
+        fi
+        
         # Обновляем код
-        git pull origin main
+        cd "$PROJECT_DIR"
+        git fetch origin
+        git reset --hard origin/main
+        git clean -fd
         
         # Запускаем процессы в фоне с nohup и логированием
         nohup python -m uvicorn back.main:app --port 9000 > backend.log 2>&1 &
