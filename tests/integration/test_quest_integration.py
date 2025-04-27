@@ -3,7 +3,7 @@ def test_accept_and_cancel_quest(db_session):
     from back.db.db import Quest
 
     # Создаём персонажа
-    start.choose_class("tg004", "mage")
+    start.choose_class("tg004", "mage", "TestUser")
 
     # Добавляем квест
     quest_it = Quest(name="Test Quest", quest_type="kill", target="1", required=1, reward_gold=10, reward_xp=5)

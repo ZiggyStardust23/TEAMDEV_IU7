@@ -3,7 +3,7 @@ def test_fight_start_and_attack(db_session):
     from back.db.db import Monster
 
     # Создаём персонажа
-    start.choose_class("tg002", "warrior")
+    start.choose_class("tg002", "warrior", "TestUser")
 
     # Добавляем монстра
     monster = Monster(name="TestMonster", attack=5, health=50)

@@ -3,7 +3,7 @@ def test_buy_item(db_session):
     from back.db.db import Item
 
     # Создаём персонажа
-    start.choose_class("tg003", "archer")
+    start.choose_class("tg003", "archer", "TestUser")
     user = shop.session.query(shop.User).filter_by(tg_id="tg003").first()
     user.gold = 100
 

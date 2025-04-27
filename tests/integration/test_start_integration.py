@@ -5,7 +5,7 @@ def test_create_user_and_choose_class(db_session):
     assert res["message"] == "Выберите класс:"
     assert "classes" in res
 
-    res2 = start.choose_class("tg001", "mage")
+    res2 = start.choose_class("tg001", "mage", "TestUser")
     assert res2["message"].startswith("Вы выбрали класс Mage")
 
     user = start.session.query(start.User).filter_by(tg_id="tg001").first()
