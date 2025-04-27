@@ -9,82 +9,54 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Шаг 1: Получение кода из репозитория
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Получаем всю историю коммитов
+    - uses: actions/checkout@v4
 
-      # Шаг 2: Настройка SSH-доступа
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    - name: Install SSH key
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Шаг 3: Подготовка сервера
-      - name: Prepare server environment
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            # Создаем резервную копию предыдущей версии
-            if [ -d ~/bot ]; then
-              mv ~/bot ~/bot_backup_$(date +%Y%m%d_%H%M%S)
-            fi
-            
-            # Создаем новую чистую директорию
-            mkdir -p ~/bot
-            echo 'Server prepared'
-          "
+    - name: Prepare server directory
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          rm -rf ~/bot
+          mkdir -p ~/bot
+        "
 
-      # Шаг 4: Копирование файлов
-      - name: Sync project files
-        run: |
-          rsync -avz --delete \
-            -e "ssh -o StrictHostKeyChecking=no" \
-            --exclude={'.git','.github','.gitignore','*.pyc','__pycache__'} \
-            ./ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/bot/
-          
-          echo "Files synchronized successfully"
+    - name: Copy entire project (including .env)
+      run: |
+        # Копируем ВСЕ файлы проекта, включая .env
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
+          --exclude='.git' \
+          --exclude='.github' \
+          --exclude='.gitignore' \
+          --exclude='*.pyc' \
+          --exclude='__pycache__' \
+          ./ \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/bot/
 
-      # Шаг 5: Настройка прав доступа
-      - name: Configure permissions
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            # Безопасные права для конфиденциальных файлов
-            chmod 600 ~/bot/.env
-            chmod 700 ~/bot/db/
-            
-            # Основные права на чтение
-            find ~/bot -type f -exec chmod 644 {} \;
-            find ~/bot -type d -exec chmod 755 {} \;
-            
-            # Исполняемые права для скриптов
-            chmod +x ~/bot/*.py
-          "
+    - name: Set correct permissions
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          chmod 600 ~/bot/.env  # Защищаем .env
+          chmod -R u+r ~/bot    # Права на чтение
+        "
 
-      # Шаг 6: Запуск сервисов
-      - name: Restart bot services
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            # Останавливаем предыдущие процессы
-            pkill -f 'python3 main.py' || true
-            pkill -f 'python3 db/db.py' || true
-            
-            # Запускаем новые процессы
-            cd ~/bot
-            nohup python3 -B db/db.py > db.log 2>&1 &
-            sleep 2  # Даем время для инициализации БД
+    - name: Start bot services and run tests
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          cd ~/bot
+          echo 'Running unit tests...'
+          python3 -m pytest tests/unit/
+          echo 'Running integration tests...'
+          python3 -m pytest tests/integration/
+      
+            echo 'Starting backend...'
+            nohup python3 -m uvicorn back.main:app --port 9000 > back.log 2>&1 &
+      
+            echo 'Starting frontend...'
+            nohup python3 front/main.py > front.log 2>&1 &
+      
+            echo 'Starting bot...'
             nohup python3 -B main.py > bot.log 2>&1 &
-            
-            # Проверяем что процессы запустились
-            pgrep -f 'python3' || echo 'Processes failed to start'
-          "
-
-      # Шаг 7: Проверка статуса (опционально)
-      - name: Verify deployment
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            sleep 5  # Даем время для запуска
-            tail -n 10 ~/bot/bot.log
-            echo -e '\nDeployment verification complete'
           "
