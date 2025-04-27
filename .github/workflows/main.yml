@@ -46,8 +46,10 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
           echo 'Killing old processes...'
-          pgrep -f 'uvicorn.back.main:app' | xargs kill -9  true
-          pgrep -f 'python3.*front/main.py' | xargs kill -9  true"
+      
+            pids=$(pgrep -f 'uvicorn.back.main:app') && [ -n "$pids" ] && kill -9 $pids || true
+            pids=$(pgrep -f 'python3.front/main.py') && [ -n "$pids" ] && kill -9 $pids || true
+          "
           
     - name: Start bot services and run tests
       run: |
