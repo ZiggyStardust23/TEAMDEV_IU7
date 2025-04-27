@@ -1,4 +1,4 @@
-name: Deploy to Production Server
+name: Deploy Telegram Bot
 
 on:
   push:
@@ -9,55 +9,82 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      # Шаг 1: Получение кода из репозитория
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Получаем всю историю коммитов
 
-    - name: Install SSH key
-      uses: webfactory/ssh-agent@v0.7.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      # Шаг 2: Настройка SSH-доступа
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Deploy to server
-      env:
-        SSH_HOST: 158.160.163.157
-        SSH_USER: user
-        PROJECT_DIR: /home/user/bot-project  # Укажите правильный путь
-      run: |
-        # Создаём временный скрипт для развёртывания
-        cat << 'EOF' > deploy.sh
-        #!/bin/bash
-        
-        # Переходим в директорию проекта
-        cd "$PROJECT_DIR" || exit 1
-        
-        # Останавливаем предыдущие процессы
-        pkill -f "uvicorn back.main:app" || true
-        pkill -f "python front/main.py" || true
-        
-        # Если директория не существует или не git репозиторий - клонируем
-        if [ ! -d "$PROJECT_DIR/.git" ]; then
-          rm -rf "$PROJECT_DIR"
-          git clone https://github.com/your-username/your-repo.git "$PROJECT_DIR"
-        fi
-        
-        # Обновляем код
-        cd "$PROJECT_DIR"
-        git fetch origin
-        git reset --hard origin/main
-        git clean -fd
-        
-        # Запускаем процессы в фоне с nohup и логированием
-        nohup python -m uvicorn back.main:app --port 9000 > backend.log 2>&1 &
-        nohup python front/main.py > bot.log 2>&1 &
-        
-        # Проверяем запуск
-        sleep 5
-        pgrep -f "uvicorn back.main:app" || { echo "Backend failed to start"; exit 1; }
-        pgrep -f "python front/main.py" || { echo "Bot failed to start"; exit 1; }
-        
-        echo "Deployment completed successfully"
-        EOF
-        
-        # Копируем скрипт на сервер и выполняем
-        scp -o StrictHostKeyChecking=no deploy.sh ${SSH_USER}@${SSH_HOST}:~/deploy.sh
-        ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} "chmod +x ~/deploy.sh && ~/deploy.sh"
+      # Шаг 3: Подготовка сервера
+      - name: Prepare server environment
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            # Создаем резервную копию предыдущей версии
+            if [ -d ~/bot ]; then
+              mv ~/bot ~/bot_backup_$(date +%Y%m%d_%H%M%S)
+            fi
+            
+            # Создаем новую чистую директорию
+            mkdir -p ~/bot
+            echo 'Server prepared'
+          "
+
+      # Шаг 4: Копирование файлов
+      - name: Sync project files
+        run: |
+          rsync -avz --delete \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            --exclude={'.git','.github','.gitignore','*.pyc','__pycache__'} \
+            ./ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/bot/
+          
+          echo "Files synchronized successfully"
+
+      # Шаг 5: Настройка прав доступа
+      - name: Configure permissions
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            # Безопасные права для конфиденциальных файлов
+            chmod 600 ~/bot/.env
+            chmod 700 ~/bot/db/
+            
+            # Основные права на чтение
+            find ~/bot -type f -exec chmod 644 {} \;
+            find ~/bot -type d -exec chmod 755 {} \;
+            
+            # Исполняемые права для скриптов
+            chmod +x ~/bot/*.py
+          "
+
+      # Шаг 6: Запуск сервисов
+      - name: Restart bot services
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            # Останавливаем предыдущие процессы
+            pkill -f 'python3 main.py' || true
+            pkill -f 'python3 db/db.py' || true
+            
+            # Запускаем новые процессы
+            cd ~/bot
+            nohup python3 -B db/db.py > db.log 2>&1 &
+            sleep 2  # Даем время для инициализации БД
+            nohup python3 -B main.py > bot.log 2>&1 &
+            
+            # Проверяем что процессы запустились
+            pgrep -f 'python3' || echo 'Processes failed to start'
+          "
+
+      # Шаг 7: Проверка статуса (опционально)
+      - name: Verify deployment
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            sleep 5  # Даем время для запуска
+            tail -n 10 ~/bot/bot.log
+            echo -e '\nDeployment verification complete'
+          "
