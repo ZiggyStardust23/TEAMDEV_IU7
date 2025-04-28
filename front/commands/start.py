@@ -43,4 +43,4 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     k = main_menu_keyboard()
 
-    await query.edit_message_text(response.get("message", "Ошибка"), reply_markup=k)
+    await query.message.reply_text(response.get("message", "Ошибка"), reply_markup=k)

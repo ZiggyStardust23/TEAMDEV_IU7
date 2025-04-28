@@ -113,7 +113,7 @@ class User(Base):
     attack = Column(Integer, default=10)
     defense = Column(Integer, default=5)
     gold = Column(Integer, default=0)
-    energy = Column(Integer, default=10)
+    energy = Column(Integer, default=100)
     abilities = Column(JSON)
     inventory = Column(JSON)
     active_quest_id = Column(Integer, ForeignKey('Quests.quest_id'))

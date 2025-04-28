@@ -40,7 +40,7 @@ def get_profile(tg_id: str):
     level = calculate_level(user.xp)
 
 
-    energy_bar = f"⚡ Энергия: {user.energy}/10"
+    energy_bar = f"⚡ Энергия: {user.energy}/100"
     profile_text = (
         f"👤 Профиль {user.username}\n"
         f"🏅 Класс: {user.class_}\n"
