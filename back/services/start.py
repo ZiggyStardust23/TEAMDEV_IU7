@@ -1,7 +1,7 @@
 # api/services/start_service.py
 
 from back.db.dbSession import session
-from back.db.db import User
+from back.db.db import Skill, User
 
 CLASS_PRESETS = {
     "mage": {
@@ -10,7 +10,7 @@ CLASS_PRESETS = {
         "mana": 100,
         "attack": 8,
         "defense": 3,
-        "skills": ["1", "2", "3"]
+        "skills": ["Огненный шар", "Ледяная тюрьма", "Энергетический всплеск"]
     },
     "warrior": {
         "class_": "Warrior",
@@ -18,7 +18,7 @@ CLASS_PRESETS = {
         "mana": 50,
         "attack": 10,
         "defense": 5,
-        "skills": ["4", "5", "6"]
+        "skills": ["Разрубающий удар", "Берсерк", "Землетрясение"]
     },
     "archer": {
         "class_": "Archer",
@@ -26,9 +26,10 @@ CLASS_PRESETS = {
         "mana": 60,
         "attack": 12,
         "defense": 4,
-        "skills": ["7", "8", "9"]
+        "skills": ["Снайперский выстрел", "Дождь стрел", "Ядовитая стрела"]
     }
 }
+
 
 def create_user(tg_id: str, username: str):
     user = session.query(User).filter_by(tg_id=tg_id).first()
@@ -49,6 +50,12 @@ def choose_class(tg_id: str, chosen: str, username: str):
         return {"message": "Персонаж уже существует."}
 
     cls = CLASS_PRESETS[chosen]
+
+    # Получаем реальные skill_id по именам
+    skill_names = cls["skills"]
+    skills = session.query(Skill).filter(Skill.name.in_(skill_names)).all()
+    skill_ids = [str(skill.skill_id) for skill in skills]
+
     user = User(
         tg_id=tg_id,
         username=username,
@@ -61,7 +68,7 @@ def choose_class(tg_id: str, chosen: str, username: str):
         defense=cls["defense"],
         gold=0,
         energy=100,
-        abilities={"skills": cls["skills"]},
+        abilities={"skills": skill_ids},
         inventory={}
     )
 
