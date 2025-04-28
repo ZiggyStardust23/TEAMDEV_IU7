@@ -62,19 +62,28 @@ def init_data():
 
     # Квесты
     if not quests_exist:
-        base_quest = Quest(name="Goblin Slayer", description="Убить гоблинов", quest_type="kill", target="1", required=3, reward_gold=11)
+        base_quest = Quest(name="Goblin Slayer", description="Убить гоблинов", quest_type="kill", target="1", required=10, reward_gold=11)
         quests = [
-            Quest(name="Orc Hunt", description="Убейте орков", quest_type="kill", target="2", required=3, reward_gold=20, reward_xp=25),
-            Quest(name="Skeleton Bane", description="Убейте скелетов", quest_type="kill", target="3", required=2, reward_gold=25, reward_xp=30),
-            Quest(name="Dark Mage Slayer", description="Победите тёмных магов", quest_type="kill", target="4", required=1, reward_gold=35, reward_xp=40),
-            Quest(name="Wolf Extermination", description="Убейте волков", quest_type="kill", target="5", required=4, reward_gold=18, reward_xp=20),
-            Quest(name="Dragonling Conqueror", description="Уничтожьте детёнышей драконов", quest_type="kill", target="6", required=1, reward_gold=50, reward_xp=60),
+            Quest(name="Orc Hunt", description="Убейте орков", quest_type="kill", target="2", required=10, reward_gold=20, reward_xp=25),
+            Quest(name="Skeleton Bane", description="Убейте скелетов", quest_type="kill", target="3", required=10, reward_gold=25, reward_xp=30),
+            Quest(name="Dark Mage Slayer", description="Победите тёмных магов", quest_type="kill", target="4", required=10, reward_gold=35, reward_xp=40),
+            Quest(name="Wolf Extermination", description="Убейте волков", quest_type="kill", target="5", required=10, reward_gold=18, reward_xp=20),
+            Quest(name="Dragonling Conqueror", description="Уничтожьте детёнышей драконов", quest_type="kill", target="6", required=10, reward_gold=50, reward_xp=60),
         ]
         session.add_all([base_quest] + quests)
 
     session.commit()
     session.close()
 
+def clear_tables():
+    session.query(Battle).delete()
+    session.query(User).delete()
+    session.query(Skill).delete()
+    session.query(Item).delete()
+    session.query(Monster).delete()
+    session.query(Quest).delete()
+    session.commit()
+    print("Все таблицы очищены.")
 
 load_dotenv()
 DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
@@ -175,5 +184,6 @@ class Battle(Base):
 
 Base.metadata.create_all(engine)
 
+clear_tables()
 init_data()
 print("Таблицы успешно созданы!")

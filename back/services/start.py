@@ -60,7 +60,7 @@ def choose_class(tg_id: str, chosen: str, username: str):
         attack=cls["attack"],
         defense=cls["defense"],
         gold=0,
-        energy=10,
+        energy=100,
         abilities={"skills": cls["skills"]},
         inventory={}
     )
